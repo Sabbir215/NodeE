@@ -1,0 +1,21 @@
+1xx Informational responses:
+100 Continue 
+101 Switching Protocols
+
+2xx Successful responses
+
+200 OK
+201 Created
+
+3xx Redirection messages:
+301 Moved Permanently 
+302 Found
+
+4xx Client error responses:
+400 Bad Request 
+404 Not Found
+
+5xx Server error responses:
+500 Internal Server error
+503 Service Unavailable.
+
