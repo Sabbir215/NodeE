@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import nodemailer from "nodemailer";
+import CustomError from '../utils/customError.js';
+CustomError;
 
 const emailSend = async (to, subject, text) => {
   try {
@@ -21,7 +23,7 @@ const emailSend = async (to, subject, text) => {
     const info = await transporter.sendMail(mailOptions);
     console.log("Email sent:", info.response);
   } catch (error) {
-    console.error("Error sending email:", error);
+    throw error;
   }
 }
 

@@ -1,5 +1,7 @@
+import 'dotenv/config'
+
 export default class CustomError extends Error {
-  constructor(statusCode, message, data = null) {
+  constructor(statusCode, message, data=null) {
     super(message);
     this.message = message;
     this.status =

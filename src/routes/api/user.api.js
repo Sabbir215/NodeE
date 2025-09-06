@@ -1,5 +1,6 @@
 import express from 'express';
-import { forgotPassword, login, logout, otpVerification, registration, resendOtpVerification, resendVerification, resetPassword, verifyEmail } from '../../controllers/user.controller.js';
+import { forgotPassword, login, logout, otpVerification, registration, resendOtpVerification, resendVerification, resetPassword, verifyEmail } from '../../controllers/user.controller.js'; // verifiedSuccuess
+
 const _ = express.Router();
 
 _.route('/registration').get(registration);

@@ -4,21 +4,21 @@ import { fullName } from "../helpers/beautify.js";
 import sendEmail from "../helpers/email.send.js";
 import userModel from "../models/user.model.js";
 import regVerTem from "../templates/registration.verify.js";
-// import resPassVerTem from "../templates/resPassword.verify.js";
+import resPassVerTem from "../templates/resPassword.verify.js";
 // import verifiedSuccessTem from "../templates/verifiedSuccessTem.js";
 import apiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import CustomError from "../utils/customError.js";
 import validateUser, {
   validatePassword
 } from "../validations/user.validation.js";
 
-export const registration = async (req, res) => {
+export const registration = asyncHandler(async (req, res) => {
   const userData = await validateUser(req.body);
   // Save user to database
   const user = new userModel(userData);
   const otp = await user.generateOtp();
   const verificationLink = await user.generateVerificationLink();
-  await user.save();
   // Send welcome email
   await sendEmail(
     user.email,
@@ -31,21 +31,22 @@ export const registration = async (req, res) => {
     )
   );
 
+  await user.save();
+  console.log("User registered successfully!");
   apiResponse.sendSuccess(
     res,
     201,
     "User registered successfully! Please check your email to verify your account.",
     user
   );
-};
+});
 
 export const resendVerification = asyncHandler(registration);
 export const resendOtpVerification = asyncHandler(registration);
 export const otpVerification = asyncHandler(async (req, res) => {
   const { otp, email } = req.body;
   if (!otp || !email) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "Invalid request. Missing OTP or email."
     );
@@ -53,17 +54,16 @@ export const otpVerification = asyncHandler(async (req, res) => {
 
   const user = await userModel.findOne({ email });
   if (!user) {
-    return apiResponse.sendError(res, 400, "Invalid OTP or email.");
+    throw new CustomError(400, "Invalid OTP or email.");
   }
   if (user.verificationOtpExpires < Date.now()) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "OTP has expired. Please registration again."
     );
   }
   if (user.verificationOtp !== otp) {
-    return apiResponse.sendError(res, 400, "Invalid OTP. Please try again.");
+    throw new CustomError(400, "Invalid OTP. Please try again.");
   }
 
   user.isActive = true;
@@ -87,14 +87,14 @@ export const otpVerification = asyncHandler(async (req, res) => {
 export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
   if (!email) {
-    return apiResponse.sendError(res, 400, "Email is required");
+    throw new CustomError(400, "Email is required");
   }
-  const user = await userModel.find({ email });
+  const user = await userModel.findOne({ email });
   if (!user) {
-    return apiResponse.sendError(res, 404, "User not found with this email");
+    throw new CustomError(404, "User not found with this email");
   }
 
-  const resetToken = user.generateResetPasswordLink;
+  const resetToken = await user.generateResetPasswordLink();
   await sendEmail(
     user.email,
     `${process.env.BRAND_NAME} Password Reset`,
@@ -104,8 +104,9 @@ export const forgotPassword = asyncHandler(async (req, res) => {
       resetToken
     )
   );
-  await user.save();
 
+  user.save();
+  console.log("Password reset link has been sent to your email.");
   apiResponse.sendSuccess(
     res,
     200,
@@ -119,27 +120,24 @@ export const resetPassword = asyncHandler(async (req, res) => {
   const { newPassword, confirmPassword } = req.body;
   validatePassword(newPassword);
   if (!token || !email) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "Invalid request. Missing token or email."
     );
   }
   if (newPassword !== confirmPassword) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "New password and confirm password do not match."
     );
   }
 
-  const user = await userModel.find({ email, resetPasswordToken: token });
+  const user = await userModel.findOne({ email, resetPasswordToken: token });
   if (!user) {
-    return apiResponse.sendError(res, 400, "Invalid token or email.");
+    throw new CustomError(400, "Invalid token or email.");
   }
   if (user.resetPasswordExpires < Date.now()) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "Reset password token has expired. Please try again."
     );
@@ -157,8 +155,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   const { token, email } = req.query;
 
   if (!token || !email) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "Invalid request. Validation token error"
     );
@@ -167,16 +164,15 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   const user = await userModel.findOne({ email, verificationToken: token });
 
   if (!user) {
-    return apiResponse.sendError(res, 400, "Invalid token or email.");
+    throw new CustomError(400, "Invalid token or email.");
   }
 
   if (user.isVerified) {
-    return apiResponse.sendError(res, 400, "Email is already verified.");
+    throw new CustomError(400, "Email is already verified.");
   }
 
   if (user.verificationTokenExpires > Date.now()) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "Verification token has expired. Please registration again."
     );
@@ -191,8 +187,8 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   await user.save();
 
   console.log("Email verified successfully!");
-  return res.redirect(`/${process.env.BASE_URL}/auth/verified-success`);
-  // apiResponse.sendSuccess(res, 200, 'Email verified successfully!', user);
+  // return res.redirect(`/${process.env.BASE_URL}/auth/verified-success`);
+  apiResponse.sendSuccess(res, 200, 'Email verified successfully!', user);
 });
 
 // export const verifiedSuccess = asyncHandler(verifiedSuccessTem);
@@ -203,8 +199,7 @@ export const login = asyncHandler(async (req, res) => {
   const { username, phone, email, password } = req.body;
 
   if ((!email && !username && !phone) || !password) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       400,
       "Please provide email/username/phone and password"
     );
@@ -217,26 +212,23 @@ export const login = asyncHandler(async (req, res) => {
 
   const user = await userModel.findOne(query);
   if (!user) {
-    return apiResponse.sendError(res, 404, "User not found with this email");
+    throw new CustomError(404, "User not found with this email");
   }
   if (!user.isEmailVerified) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       401,
       "Email is not verified. Please verify your email to login."
     );
   }
   if (!user.isActive) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       403,
       "Your account is inactive. Please contact support."
     );
   }
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
-    return apiResponse.sendError(
-      res,
+    throw new CustomError(
       401,
       "Invalid password. Please try again."
     );
@@ -266,7 +258,7 @@ export const logout = asyncHandler(async (req, res) => {
   // const token = req.headers.authorization.split(' ')[1] || req.cookies.refreshToken;
 
   if (!authHeader || !refreshToken) {
-    return apiResponse.sendError(res, 401, "Unauthorized");
+    throw new CustomError(401, "Unauthorized");
   }
 
   let authQuery, refreshQuery, iat, exp;
@@ -294,12 +286,12 @@ export const logout = asyncHandler(async (req, res) => {
   }
 
   if (!authQuery || !refreshQuery) {
-    return apiResponse.sendError(res, 401, "Unauthorized");
+    throw new CustomError(401, "Unauthorized");
   }
 
   const user = await userModel.findOne({ $or: [authQuery, refreshQuery] });
   if (!user) {
-    return apiResponse.sendError(res, 401, "Unauthorized");
+    throw new CustomError(401, "Unauthorized");
   }
   if (authHeader) res.setHeader("Authorization", null);
   res.clearCookie("refreshToken", {
