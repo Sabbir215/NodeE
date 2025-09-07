@@ -4,9 +4,9 @@ import 'dotenv/config';
 import jwt from "jsonwebtoken";
 import mongoose, { Schema, Types } from "mongoose";
 import validatorImport from "validator";
-import customError from "../utils/customError.js";
-const { isEmail, isMobilePhone, isStrongPassword, isPostalCode } = validatorImport;
+import CustomError from "../utils/customError.js";
 const { ObjectId } = Types;
+const { isEmail, isMobilePhone, isStrongPassword, isPostalCode } = validatorImport;
 
 
 
@@ -399,7 +399,7 @@ userSchema.methods.verifyAccessToken = async function (token) {
   try {
     return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
   } catch (error) {
-    throw new customError(401, "Invalid access token");
+    throw new CustomError(401, "Invalid access token");
   }
 }
 
@@ -407,7 +407,7 @@ userSchema.methods.verifyRefreshToken = async function (token) {
   try {
     return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
   } catch (error) {
-    throw new customError(401, "Invalid refresh token");
+    throw new CustomError(401, "Invalid refresh token");
   }
 }
 
