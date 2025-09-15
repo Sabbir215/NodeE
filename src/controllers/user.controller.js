@@ -14,7 +14,7 @@ import validateUser, {
 } from "../validations/user.validation.js";
 
 export const registration = asyncHandler(async (req, res) => {
-  const userData = await validateUser(req.body);
+  const userData = await validateUser(req);
   // Save user to database
   const user = new userModel(userData);
   const otp = await user.generateOtp();

@@ -50,9 +50,9 @@ const userValidationSchema = Joi.object({
   // permissions: Joi.array().items(Joi.string()).optional(),
 });
 
-export default async (userData) => {
+export default async (req) => {
   try {
-    const validations = await userValidationSchema.validateAsync(userData, {
+    const validations = await userValidationSchema.validateAsync(req.body, {
       abortEarly: false,
       allowUnknown: true,
     });
