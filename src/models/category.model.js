@@ -39,14 +39,6 @@ const categorySchema = new Schema({
       ref: "subCategory",
     },
   ],
-//   parentCategory: {
-//     type: ObjectId,
-//     ref: "Category",
-//   },
-//   isFeatured: {
-//     type: Boolean,
-//     default: false,
-//   },
   isActive: {
     type: Boolean,
     default: true,
@@ -80,7 +72,6 @@ categorySchema.pre('save', async function (next) {
   next();
 });
 
-
 // categorySchema.pre('save', async function (next) {
 //   if (this.isModified('name')) {
 //     const slug = slugify(this.name, {
@@ -104,32 +95,17 @@ categorySchema.pre('save', async function (next) {
 //   next();
 // });
 
-categorySchema.pre('findOneAndUpdate', async function (next) {
-  const update = this.getUpdate();
-  if (update.name) {
-    const existingCategory = await mongoose.model('Category').findOne({ name: update.name });
-    if (existingCategory && !existingCategory._id.equals(this._conditions._id)) {
-      throw new CustomError(400, 'Category name already exists');
+categorySchema.pre('findOneAndDelete', async function (next) {
+    const category = await this.model.findOne(this.getQuery());
+
+    if (!category) {
+        return next(new CustomError(404, 'Category not found'));
     }
-    update.slug = slugify(update.name, { lower: true});
-  }
-  this.setUpdate(update);
-  next();
+
+    if (category.subCategories.length > 0) {
+      return next(new CustomError(400, 'Cannot delete category with associated sub-categories'));
+    }
+    next();
 });
-
-// categorySchema.pre('findOneAndDelete', async function (next) { {
-//     const category = await this.model.findOne(this.getQuery());//     const category = await this.model.findOne(this.getQuery());
-//     
-//     if (!category) {
-//         return next(new CustomError(404, 'Category not found'));      return next(new CustomError(404, 'Category not found'));
-//     }//     }
-//
-//     if (category.subCategories && category.subCategories.length > 0) {
-//       return next(new CustomError(400, 'Cannot delete category with associated sub-categories'));    return next(new CustomError(400, 'Cannot delete category with associated sub-categories'));
-//     }
-//     next();    next();
-// });// });
-
-
 
 export default mongoose.model("Category", categorySchema);
