@@ -1,15 +1,15 @@
 import Joi from "joi";
 import customError from "../utils/customError.js";
 
-const categoryValidationSchema = Joi.object({
+const subCategoryValidationSchema = Joi.object({
   // name validation: required, max 100 chars, alphanumeric with spaces, hyphen, and underscore
   // multiple spaces are converted to single space
   name: Joi.string()
     .required()
     .max(100)
     .messages({
-      "string.empty": "Category name is required.",
-      "string.max": "Category name must be at most 100 characters long.",
+      "string.empty": "Sub-category name is required.",
+      "string.max": "Sub-category name must be at most 100 characters long.",
     })
     .custom((value, helpers) => {
       const cleaned = value.replace(/\s+/g, " ");
@@ -20,7 +20,7 @@ const categoryValidationSchema = Joi.object({
     })
     .messages({
       "string.alphanumWithSpacesHyphenUnderscore":
-        "Category name is not valid! (only letters, numbers, spaces, hyphen, and underscore allowed)",
+        "Sub-category name is not valid! (only letters, numbers, spaces, hyphen, and underscore allowed)",
     }),
 
   image: Joi.string().uri().allow("").messages({
@@ -34,14 +34,6 @@ const categoryValidationSchema = Joi.object({
 
 export default async (req) => {
   try {
-    const validations = await categoryValidationSchema.validateAsync(
-      req.body,
-      {
-        abortEarly: false,
-        allowUnknown: true,
-      }
-    );
-
     // image validation
     if (req.file) {
       const mimeTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
@@ -54,6 +46,13 @@ export default async (req) => {
       }
     }
 
+    const validations = await subCategoryValidationSchema.validateAsync(
+      req.body,
+      {
+        abortEarly: false,
+        allowUnknown: true,
+      }
+    );
     return validations;
   } catch (error) {
     console.error("Validation error:", error);
