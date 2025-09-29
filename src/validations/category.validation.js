@@ -7,10 +7,6 @@ const categoryValidationSchema = Joi.object({
   name: Joi.string()
     .required()
     .max(100)
-    .messages({
-      "string.empty": "Category name is required.",
-      "string.max": "Category name must be at most 100 characters long.",
-    })
     .custom((value, helpers) => {
       const cleaned = value.replace(/\s+/g, " ");
       if (!/^[a-zA-Z0-9 _-]+$/.test(cleaned)) {
@@ -19,6 +15,8 @@ const categoryValidationSchema = Joi.object({
       return cleaned.trim();
     })
     .messages({
+      "string.empty": "Category name is required.",
+      "string.max": "Category name must be at most 100 characters long.",
       "string.alphanumWithSpacesHyphenUnderscore":
         "Category name is not valid! (only letters, numbers, spaces, hyphen, and underscore allowed)",
     }),
@@ -49,8 +47,8 @@ export default async (req) => {
       if (!mimeTypes.includes(mimetype)) {
         throw new customError(400, "Invalid image format. Only JPEG, PNG, JPG, and WEBP are allowed.");
       }
-      if (req.file.size > 2 * 1024 * 1024) { // 2MB limit
-        throw new customError(400, "Image size should not exceed 2MB.");
+      if (req.file.size > 20 * 1024 * 1024) { // 20MB limit
+        throw new customError(400, "Image size should not exceed 20MB.");
       }
     }
 

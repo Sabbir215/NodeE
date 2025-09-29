@@ -9,7 +9,7 @@ const isValidObjectId = (value, helpers) => {
     return value;
   }
   if (!mongoose.Types.ObjectId.isValid(value)) {
-    return helpers.error('any.invalid');
+    return helpers.error('objectId.invalid');
   }
   return value;
 };
@@ -26,14 +26,15 @@ const discountValidationSchema = Joi.object({
     })
     .custom((value, helpers) => {
       const cleaned = value.replace(/\s+/g, " ");
-      if (!/^[a-zA-Z0-9 _-]+$/.test(cleaned)) {
-        return helpers.error("string.alphanumWithSpacesHyphenUnderscore");
+      // Allow letters, numbers, spaces, and common punctuation for discount names
+      if (!/^[a-zA-Z0-9 _\-.,!&()%$]+$/.test(cleaned)) {
+        return helpers.error("string.invalidCharacters");
       }
       return cleaned.trim();
     })
     .messages({
-      "string.alphanumWithSpacesHyphenUnderscore":
-        "Discount name is not valid! (only letters, numbers, spaces, hyphen, and underscore allowed)",
+      "string.invalidCharacters":
+        "Discount name contains invalid characters! (letters, numbers, spaces, and common punctuation allowed)",
     }),
 
   description: Joi.string().max(500).messages({
@@ -72,38 +73,47 @@ const discountValidationSchema = Joi.object({
     }),
 
   discountPlan: Joi.string()
-    .valid('flat', 'category', 'product', 'subcategory')
+    .valid('flat', 'category', 'product', 'subcategory', 'brand')
     .required()
     .messages({
-      'any.only': 'Discount plan must be one of: flat, category, product, subcategory.',
+      'any.only': 'Discount plan must be one of: flat, category, product, subcategory, brand.',
       'any.required': 'Discount plan is required.',
     }),
 
   targetProduct: Joi.when('discountPlan', {
     is: 'product',
     then: Joi.string().custom(isValidObjectId).required().messages({
-      'any.invalid': 'Target product ID is not valid.',
+      'objectId.invalid': 'Target product ID must be a valid MongoDB ObjectId format.',
       'any.required': 'Target product is required for product discount plan.',
     }),
-    otherwise: Joi.string().custom(isValidObjectId).allow(null, ''),
+    otherwise: Joi.string().allow(null, '').custom(value => value.replace(value, '')),
   }),
 
   targetCategory: Joi.when('discountPlan', {
     is: 'category',
     then: Joi.string().custom(isValidObjectId).required().messages({
-      'any.invalid': 'Target category ID is not valid.',
+      'objectId.invalid': 'Target category ID must be a valid MongoDB ObjectId format.',
       'any.required': 'Target category is required for category discount plan.',
     }),
-    otherwise: Joi.string().custom(isValidObjectId).allow(null, ''),
+    otherwise: Joi.string().allow(null, '').custom(value => value.replace(value, '')),
   }),
 
   targetSubcategory: Joi.when('discountPlan', {
     is: 'subcategory',
     then: Joi.string().custom(isValidObjectId).required().messages({
-      'any.invalid': 'Target subcategory ID is not valid.',
+      'objectId.invalid': 'Target subcategory ID must be a valid MongoDB ObjectId format.',
       'any.required': 'Target subcategory is required for subcategory discount plan.',
     }),
-    otherwise: Joi.string().custom(isValidObjectId).allow(null, ''),
+    otherwise: Joi.string().allow(null, '').custom(value => value.replace(value, '')),
+  }),
+
+  targetBrand: Joi.when('discountPlan', {
+    is: 'brand',
+    then: Joi.string().custom(isValidObjectId).required().messages({
+      'objectId.invalid': 'Target brand ID must be a valid MongoDB ObjectId format.',
+      'any.required': 'Target brand is required for brand discount plan.',
+    }),
+    otherwise: Joi.string().allow(null, '').custom(value => value.replace(value, '')),
   }),
 
   isActive: Joi.boolean().default(true),

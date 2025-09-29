@@ -1,5 +1,18 @@
 import Joi from "joi";
+import mongoose from "mongoose";
 import customError from "../utils/customError.js";
+
+// Helper: check valid ObjectId
+const isValidObjectId = (value, helpers) => {
+  // Allow empty strings and null values
+  if (value === '' || value === null || value === undefined) {
+    return value;
+  }
+  if (!mongoose.Types.ObjectId.isValid(value)) {
+    return helpers.error('objectId.invalid');
+  }
+  return value;
+};
 
 const brandValidationSchema = Joi.object({
   // name validation: required, max 100 chars, alphanumeric with spaces, hyphen, and underscore
@@ -7,28 +20,35 @@ const brandValidationSchema = Joi.object({
   name: Joi.string()
     .required()
     .max(100)
-    .messages({
-      "string.empty": "Brand name is required.",
-      "string.max": "Brand name must be at most 100 characters long.",
-    })
     .custom((value, helpers) => {
       const cleaned = value.replace(/\s+/g, " ");
-      if (!/^[a-zA-Z0-9 _-]+$/.test(cleaned)) {
-        return helpers.error("string.alphanumWithSpacesHyphenUnderscore");
+      if (!/^[a-zA-Z0-9 _\-.,!&()%$]+$/.test(cleaned)) {
+        return helpers.error("string.invalidCharacters");
       }
       return cleaned.trim();
     })
     .messages({
-      "string.alphanumWithSpacesHyphenUnderscore":
-        "Brand name is not valid! (only letters, numbers, spaces, hyphen, and underscore allowed)",
+      "string.empty": "Brand name is required.",
+      "string.max": "Brand name must be at most 100 characters long.",
+      "string.invalidCharacters":
+        "Brand name contains invalid characters! (letters, numbers, spaces, and common punctuation allowed)",
     }),
 
   image: Joi.string().uri().allow("").messages({
     "string.uri": "Image must be a valid URI.",
   }),
+  
   description: Joi.string().max(500).messages({
     "string.max": "Description must be at most 500 characters long.",
   }),
+
+  subCategory: Joi.string()
+    .custom(isValidObjectId)
+    .required()
+    .messages({
+      'objectId.invalid': 'SubCategory ID must be a valid MongoDB ObjectId format.',
+      'any.required': 'SubCategory is required.',
+    }),
   since: Joi.number()
     .integer()
     .min(1800)
