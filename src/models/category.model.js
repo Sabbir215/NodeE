@@ -36,7 +36,13 @@ const categorySchema = new Schema({
   subCategories: [
     {
       type: ObjectId,
-      ref: "subCategory",
+      ref: "SubCategory",
+    },
+  ],
+  discounts: [
+    {
+      type: ObjectId,
+      ref: "Discount",
     },
   ],
   isActive: {
@@ -94,18 +100,5 @@ categorySchema.pre('save', async function (next) {
 //   }
 //   next();
 // });
-
-categorySchema.pre('findOneAndDelete', async function (next) {
-    const category = await this.model.findOne(this.getQuery());
-
-    if (!category) {
-        return next(new CustomError(404, 'Category not found'));
-    }
-
-    if (category.subCategories.length > 0) {
-      return next(new CustomError(400, 'Cannot delete category with associated sub-categories'));
-    }
-    next();
-});
 
 export default mongoose.model("Category", categorySchema);

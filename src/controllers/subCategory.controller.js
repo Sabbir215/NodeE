@@ -1,5 +1,6 @@
 import { deleteImage, uploadImage } from "../helpers/cloudinary.js";
 import Category from "../models/category.model.js";
+import Discount from "../models/discount.model.js";
 import SubCategory from "../models/subCategory.model.js";
 import apiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -22,6 +23,13 @@ export const createSubCategory = asyncHandler(async (req, res, next) => {
 
   const { name, image, description, category } = validatedData;
 
+  // Validate that the parent category exists first
+  const parentCategory = await Category.findById(category);
+  if (!parentCategory) {
+    return next(new CustomError(400, 'Parent category not found'));
+  }
+
+  // Now create the subcategory
   const subCategory = new SubCategory({
     name,
     image,
@@ -29,15 +37,18 @@ export const createSubCategory = asyncHandler(async (req, res, next) => {
     category,
   });
 
-  // ensure the parent category exists and update its subCategories array
-  const parent = await Category.findById(category, {
-    push: { subCategories: subCategory._id }
-  },{
-    new: true
-  });
-  if (!parent) return next(new CustomError(400, 'Parent category not found'));
-  
-  await parent.save();
+  // Update the parent category's subCategories array first
+  const updatedCategory = await Category.findByIdAndUpdate(
+    category,
+    { $addToSet: { subCategories: subCategory._id } },
+    { new: true }
+  );
+
+  if (!updatedCategory) {
+    return next(new CustomError(500, 'Failed to update parent category'));
+  }
+
+  // Only save the subcategory if parent update succeeded
   await subCategory.save();
 
   apiResponse.sendSuccess(res, 201, "Sub-category created successfully", subCategory);
@@ -49,18 +60,37 @@ export const deleteSubCategory = asyncHandler(async (req, res, next) => {
   const sub = await SubCategory.findOne({ slug });
   if (!sub) return next(new CustomError(404, "Sub-category not found"));
 
-  // remove reference from parent category
+  // Check if subcategory has brands
+  if (sub.brands && sub.brands.length > 0) {
+    return next(new CustomError(400, 'Cannot delete sub-category with associated brands'));
+  }
+
+  // Delete all discounts associated with this subcategory
+  if (sub.discounts && sub.discounts.length > 0) {
+    const deleteResult = await Discount.deleteMany({ _id: { $in: sub.discounts } });
+    console.log(`Deleted ${deleteResult.deletedCount} discounts associated with subcategory`);
+  }
+
+  // Remove reference from parent category
   if (sub.category) {
-    console.log(sub.category)
-    const parent = await Category.findById(sub.category, {
-        pull: { subCategories: sub._id },
-        new: true
-    });
-      await parent.save();
+    const updatedParent = await Category.findByIdAndUpdate(
+      sub.category,
+      { $pull: { subCategories: sub._id } },
+      { new: true }
+    );
+    
+    if (!updatedParent) {
+      return next(new CustomError(500, 'Failed to remove subcategory reference from parent category'));
     }
+  }
 
   if (sub.image) await deleteImage(sub.image);
-  await SubCategory.findOneAndDelete({ slug });
+
+  const deletedSub = await SubCategory.findOneAndDelete({ slug });
+  
+  if (!deletedSub) {
+    return next(new CustomError(500, "Failed to delete subcategory"));
+  }
 
   apiResponse.sendSuccess(res, 200, "Sub-category deleted successfully", null);
 });
@@ -89,22 +119,26 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
   }
   if (description) sub.description = description;
   if (category) {
-    // ensure the new category exists and update parent arrays accordingly
+    // Ensure the new category exists
     const newParent = await Category.findById(category);
     if (!newParent) return next(new CustomError(400, 'Parent category not found'));
 
+    // Only update if category is actually changing
     if (!sub.category || sub.category.toString() !== category.toString()) {
-      // remove from old parent
+      // Remove from old parent category
       if (sub.category) {
-        const oldParent = await Category.findById(sub.category);
-        if (oldParent && oldParent.subCategories) {
-          oldParent.subCategories = oldParent.subCategories.filter(id => id.toString() !== sub._id.toString());
-          await oldParent.save();
-        }
+        await Category.findByIdAndUpdate(
+          sub.category,
+          { $pull: { subCategories: sub._id } }
+        );
       }
-      // add to new parent
-      newParent.subCategories.push(sub._id);
-      await newParent.save();
+      
+      // Add to new parent category
+      await Category.findByIdAndUpdate(
+        category,
+        { $addToSet: { subCategories: sub._id } }
+      );
+      
       sub.category = category;
     }
   }
@@ -114,13 +148,15 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
 });
 
 export const getSubCategories = asyncHandler(async (req, res, next) => {
-  const subs = await SubCategory.find().populate('category', 'name slug subCategories image description');
+  const subs = await SubCategory.find()
+    .populate('category discounts brands');
   apiResponse.sendSuccess(res, 200, "Sub-categories retrieved successfully", subs);
 });
 
 export const getSubCategoryBySlug = asyncHandler(async (req, res, next) => {
   const { slug } = req.params;
-  const sub = await SubCategory.findOne({ slug }).populate('category', 'name slug subCategories image description');
+  const sub = await SubCategory.findOne({ slug })
+    .populate('category discounts brands');
   if (!sub) return next(new CustomError(404, "Sub-category not found"));
   apiResponse.sendSuccess(res, 200, "Sub-category retrieved successfully", sub);
 });

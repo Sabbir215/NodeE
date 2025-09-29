@@ -1,3 +1,4 @@
+import Brand from "../models/brand.model.js";
 import Category from "../models/category.model.js";
 import Discount from "../models/discount.model.js";
 import SubCategory from "../models/subCategory.model.js";
@@ -15,7 +16,7 @@ export const createDiscount = asyncHandler(async (req, res, next) => {
     return next(new CustomError(400, validatedData.error.details));
   }
   
-  const { discountName, description, discountValidFrom, discountValidTo, discountValueByAmount, discountValueByPercentage, discountType, discountPlan, targetProduct, targetCategory, targetSubcategory } = validatedData;
+  const { discountName, description, discountValidFrom, discountValidTo, discountValueByAmount, discountValueByPercentage, discountType, discountPlan, targetProduct, targetCategory, targetSubCategory, targetBrand } = validatedData;
 
   // Check if discount with the same name already exists
   const existingDiscount = await Discount.findOne({ discountName });
@@ -31,10 +32,17 @@ export const createDiscount = asyncHandler(async (req, res, next) => {
     }
   }
 
-  if (targetSubcategory && targetSubcategory !== '') {
-    const subCategoryExists = await SubCategory.findById(targetSubcategory);
+  if (targetSubCategory && targetSubCategory !== '') {
+    const subCategoryExists = await SubCategory.findById(targetSubCategory);
     if (!subCategoryExists) {
       return next(new CustomError(400, "Target subcategory does not exist"));
+    }
+  }
+
+  if (targetBrand && targetBrand !== '') {
+    const brandExists = await Brand.findById(targetBrand);
+    if (!brandExists) {
+      return next(new CustomError(400, "Target brand does not exist"));
     }
   }
 
@@ -46,59 +54,54 @@ export const createDiscount = asyncHandler(async (req, res, next) => {
   //   }
   // }
 
-    // Filter out empty string values for ObjectId fields
+  // Filter out empty string values for ObjectId fields
   const discountData = { ...req.body };
   if (discountData.targetCategory === '') {
     delete discountData.targetCategory;
   }
-  if (discountData.targetSubcategory === '') {
-    delete discountData.targetSubcategory;
+  if (discountData.targetSubCategory === '') {
+    delete discountData.targetSubCategory;
   }
   if (discountData.targetProduct === '') {
     delete discountData.targetProduct;
   }
-
-  // Validate that referenced entities exist
-  if (discountData.targetCategory) {
-    const categoryExists = await Category.findById(discountData.targetCategory);
-    if (!categoryExists) {
-      return next(new CustomError(400, "Target category does not exist"));
-    }
+  if (discountData.targetBrand === '') {
+    delete discountData.targetBrand;
   }
 
-  if (discountData.targetSubcategory) {
-    const subCategoryExists = await SubCategory.findById(discountData.targetSubcategory);
-    if (!subCategoryExists) {
-      return next(new CustomError(400, "Target subcategory does not exist"));
-    }
-  }
-
-  // Note: Add Product model import and validation when Product model is available
-  // if (discountData.targetProduct) {
-  //   const productExists = await Product.findById(discountData.targetProduct);
-  //   if (!productExists) {
-  //     return next(new CustomError(400, "Target product does not exist"));
-  //   }
-  // }
-
+  // Create and save the new discount
   const discount = new Discount(discountData);
-
   await discount.save();
 
-  // Update related models
+  // Update relationships
   if (discount.discountPlan === 'category' && discount.targetCategory) {
     await Category.findOneAndUpdate(
       { _id: discount.targetCategory },
-      { $set: { discount: discount._id } }
+      { $addToSet: { discounts: discount._id } }
     );
   }
 
-  if (discount.discountPlan === 'subcategory' && discount.targetSubcategory) {
+  if (discount.discountPlan === 'subcategory' && discount.targetSubCategory) {
     await SubCategory.findOneAndUpdate(
-      { _id: discount.targetSubcategory },
-      { $set: { discount: discount._id } }
+      { _id: discount.targetSubCategory },
+      { $addToSet: { discounts: discount._id } }
     );
   }
+
+  if (discount.discountPlan === 'brand' && discount.targetBrand) {
+    await Brand.findOneAndUpdate(
+      { _id: discount.targetBrand },
+      { $addToSet: { discounts: discount._id } }
+    );
+  }
+
+  // note: Add Product relationship update when Product model is available
+  // if (discount.discountPlan === 'product' && discount.targetProduct) {
+  //   await Product.findOneAndUpdate(
+  //     { _id: discount.targetProduct },
+  //     { $addToSet: { discounts: discount._id } }
+  //   );
+  // }
 
   apiResponse.sendSuccess(res, 201, "Discount created successfully", discount);
 });
@@ -116,14 +119,21 @@ export const deleteDiscount = asyncHandler(async (req, res, next) => {
     if (discount.discountPlan === 'category' && discount.targetCategory) {
       await Category.findOneAndUpdate(
         { _id: discount.targetCategory },
-        { $unset: { discount: 1 } }
+        { $pull: { discounts: discount._id } }
       );
     }
 
-    if (discount.discountPlan === 'subcategory' && discount.targetSubcategory) {
+    if (discount.discountPlan === 'subcategory' && discount.targetSubCategory) {
       await SubCategory.findOneAndUpdate(
-        { _id: discount.targetSubcategory },
-        { $unset: { discount: 1 } }
+        { _id: discount.targetSubCategory },
+        { $pull: { discounts: discount._id } }
+      );
+    }
+
+    if (discount.discountPlan === 'brand' && discount.targetBrand) {
+      await Brand.findOneAndUpdate(
+        { _id: discount.targetBrand },
+        { $pull: { discounts: discount._id } }
       );
     }
     
@@ -155,7 +165,7 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
     return next(new CustomError(400, validatedData.error.details));
   }
   
-  const { discountName, description, discountValidFrom, discountValidTo, discountValueByAmount, discountValueByPercentage, discountType, discountPlan, targetProduct, targetCategory, targetSubCategory } = validatedData;
+  const { discountName, description, discountValidFrom, discountValidTo, discountValueByAmount, discountValueByPercentage, discountType, discountPlan, targetProduct, targetCategory, targetSubCategory, targetBrand } = validatedData;
 
   // Filter out empty string values for ObjectId fields
   const discountData = { ...req.body };
@@ -167,6 +177,9 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
   }
   if (discountData.targetProduct === '') {
     delete discountData.targetProduct;
+  }
+  if (discountData.targetBrand === '') {
+    delete discountData.targetBrand;
   }
 
   // Validate that referenced entities exist
@@ -181,6 +194,13 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
     const subCategoryExists = await SubCategory.findById(discountData.targetSubCategory);
     if (!subCategoryExists) {
       return next(new CustomError(400, "Target subcategory does not exist"));
+    }
+  }
+
+  if (discountData.targetBrand) {
+    const brandExists = await Brand.findById(discountData.targetBrand);
+    if (!brandExists) {
+      return next(new CustomError(400, "Target brand does not exist"));
     }
   }
 
@@ -207,6 +227,7 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
   const oldDiscountPlan = discount.discountPlan;
   const oldTargetCategory = discount.targetCategory;
   const oldTargetSubCategory = discount.targetSubCategory;
+  const oldTargetBrand = discount.targetBrand;
 
   // Update fields
   if (discountName) discount.discountName = discountName;
@@ -240,24 +261,37 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
       discount.targetSubCategory = undefined;
     }
   }
+  if (targetBrand !== undefined) {
+    if (targetBrand && targetBrand !== '') {
+      discount.targetBrand = targetBrand;
+    } else {
+      discount.targetBrand = undefined;
+    }
+  }
 
   await discount.save();
 
   // Handle relationship updates
   const discountId = discount._id;
 
-  // Clean up old relationships if plan changed
+    // Clean up old relationships if plan changed
   if (oldDiscountPlan !== discount.discountPlan) {
     if (oldDiscountPlan === 'category' && oldTargetCategory) {
       await Category.findOneAndUpdate(
         { _id: oldTargetCategory },
-        { $unset: { discount: 1 } }
+        { $pull: { discounts: discount._id } }
       );
     }
     if (oldDiscountPlan === 'subcategory' && oldTargetSubCategory) {
       await SubCategory.findOneAndUpdate(
         { _id: oldTargetSubCategory },
-        { $unset: { discount: 1 } }
+        { $pull: { discounts: discount._id } }
+      );
+    }
+    if (oldDiscountPlan === 'brand' && oldTargetBrand) {
+      await Brand.findOneAndUpdate(
+        { _id: oldTargetBrand },
+        { $pull: { discounts: discount._id } }
       );
     }
   }
@@ -266,14 +300,21 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
   if (discount.discountPlan === 'category' && discount.targetCategory) {
     await Category.findOneAndUpdate(
       { _id: discount.targetCategory },
-      { $set: { discount: discountId } }
+      { $addToSet: { discounts: discountId } }
     );
   }
 
   if (discount.discountPlan === 'subcategory' && discount.targetSubCategory) {
     await SubCategory.findOneAndUpdate(
       { _id: discount.targetSubCategory },
-      { $set: { discount: discountId } }
+      { $addToSet: { discounts: discountId } }
+    );
+  }
+
+  if (discount.discountPlan === 'brand' && discount.targetBrand) {
+    await Brand.findOneAndUpdate(
+      { _id: discount.targetBrand },
+      { $addToSet: { discounts: discountId } }
     );
   }
 
@@ -283,7 +324,8 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
 export const getDiscounts = asyncHandler(async (req, res, next) => {
   const discounts = await Discount.find()
     .populate('targetCategory')
-    .populate('targetSubCategory');
+    .populate('targetSubCategory')
+    .populate('targetBrand');
   apiResponse.sendSuccess(res, 200, "Discounts retrieved successfully", discounts);
 });
 
@@ -291,7 +333,8 @@ export const getDiscountBySlug = asyncHandler(async (req, res, next) => {
   const { slug } = req.params;
   const discount = await Discount.findOne({ slug })
     .populate('targetCategory')
-    .populate('targetSubCategory');
+    .populate('targetSubCategory')
+    .populate('targetBrand');
   if (!discount) {
     return next(new CustomError(404, "Discount not found"));
   }

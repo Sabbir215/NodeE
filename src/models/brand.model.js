@@ -27,6 +27,23 @@ const brandSchema = new Schema({
     lowercase: true,
     index: true,
   },
+  subCategory: {
+    type: ObjectId,
+    ref: "SubCategory",
+    required: [true, "SubCategory is required"],
+  },
+  products: [
+    {
+      type: ObjectId,
+      ref: "Product",
+    },
+  ],
+  discounts: [
+    {
+      type: ObjectId,
+      ref: "Discount",
+    },
+  ],
   since: {
     type: Number,
     required: [true, "Since year is required"],

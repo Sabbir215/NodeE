@@ -49,7 +49,7 @@ const discountSchema = new Schema({
   },
   discountPlan: {
     type: String,
-    enum: ['flat', 'category', 'product', 'subcategory'],
+    enum: ['flat', 'category', 'product', 'subcategory', 'brand'],
     required: [true, "Discount plan is required"],
   },
   targetProduct: {
@@ -60,9 +60,13 @@ const discountSchema = new Schema({
     type: ObjectId,
     ref: 'Category',
   },
-  targetSubcategory: {
+  targetSubCategory: {
     type: ObjectId,
-    ref: 'subCategory',
+    ref: 'SubCategory',
+  },
+  targetBrand: {
+    type: ObjectId,
+    ref: 'Brand',
   },
   isActive: {
     type: Boolean,
