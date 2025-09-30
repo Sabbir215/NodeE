@@ -10,12 +10,10 @@ import categoryValidationSchema from "../validations/category.validation.js";
 export const createCategory = asyncHandler(async (req, res, next) => {
   // Validate category data
   const validatedData = await categoryValidationSchema(req);
-  if (validatedData.error) {
-    return next(new CustomError(400, validatedData.error.details));
-  }
+  
   // If an image file is provided, upload it to Cloudinary
-  if (req.file) {
-    validatedData.image = await uploadImage(req.file.path);
+  if (req.files.image && req.files.image[0]) {
+    validatedData.image = await uploadImage(req.files.image[0].path);
   }
   const { name, image, description } = validatedData;
 
@@ -91,12 +89,10 @@ export const updateCategory = asyncHandler(async (req, res, next) => {
 
   // Validate category data
   const validatedData = await categoryValidationSchema(req);
-  if (validatedData.error) {
-    return next(new CustomError(400, validatedData.error.details));
-  }
+  
   // If an image file is provided, upload it to Cloudinary
-  if (req.file) {
-    validatedData.image = await uploadImage(req.file.path);
+  if (req.files.image && req.files.image[0]) {
+    validatedData.image = await uploadImage(req.files.image[0].path);
   }
 
   const { name, image, description } = validatedData;

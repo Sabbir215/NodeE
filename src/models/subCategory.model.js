@@ -38,6 +38,12 @@ const subCategorySchema = new Schema({
       ref: "Brand",
     },
   ],
+  products: [
+    {
+      type: ObjectId,
+      ref: "Product",
+    },
+  ],
   discounts: [
     {
       type: ObjectId,

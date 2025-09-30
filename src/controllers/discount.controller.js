@@ -12,9 +12,6 @@ export const createDiscount = asyncHandler(async (req, res, next) => {
 
   // Validate discount data
   const validatedData = await discountValidationSchema(req);
-  if (validatedData.error) {
-    return next(new CustomError(400, validatedData.error.details));
-  }
   
   const { discountName, description, discountValidFrom, discountValidTo, discountValueByAmount, discountValueByPercentage, discountType, discountPlan, targetProduct, targetCategory, targetSubCategory, targetBrand } = validatedData;
 
@@ -161,9 +158,6 @@ export const updateDiscount = asyncHandler(async (req, res, next) => {
   // Validate discount data
   const validatedData = await discountValidationSchema(req);
   console.log(validatedData);
-  if (validatedData.error) {
-    return next(new CustomError(400, validatedData.error.details));
-  }
   
   const { discountName, description, discountValidFrom, discountValidTo, discountValueByAmount, discountValueByPercentage, discountType, discountPlan, targetProduct, targetCategory, targetSubCategory, targetBrand } = validatedData;
 

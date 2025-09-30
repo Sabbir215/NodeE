@@ -3,10 +3,10 @@ import { createSubCategory, deleteSubCategory, getSubCategories, getSubCategoryB
 import upload from '../../middlewares/multer.middleware.js';
 const _ = express.Router();
 
-_.route('/create-subCategory').post(upload.single('image'), createSubCategory);
+_.route('/create-subCategory').post(upload.fields([{ name: 'image', maxCount: 1 }]), createSubCategory);
 _.route('/subCategories').get(getSubCategories);
 _.route('/subCategory-slug/:slug').get(getSubCategoryBySlug);
-_.route('/update-subCategory/:slug').put(upload.single('image'), updateSubCategory);
+_.route('/update-subCategory/:slug').put(upload.fields([{ name: 'image', maxCount: 1 }]), updateSubCategory);
 _.route('/delete-subCategory/:slug').delete(deleteSubCategory);
 
 

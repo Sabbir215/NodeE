@@ -39,6 +39,12 @@ const categorySchema = new Schema({
       ref: "SubCategory",
     },
   ],
+  products: [
+    {
+      type: ObjectId,
+      ref: "Product",
+    },
+  ],
   discounts: [
     {
       type: ObjectId,
