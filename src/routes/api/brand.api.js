@@ -3,10 +3,10 @@ import { createBrand, deleteBrand, getBrandBySlug, getBrands, updateBrand } from
 import upload from '../../middlewares/multer.middleware.js';
 const _ = express.Router();
 
-_.route('/create-brand').post(upload.single('image'), createBrand);
+_.route('/create-brand').post(upload.fields([{ name: 'image', maxCount: 1 }]), createBrand);
 _.route('/brands').get(getBrands);
 _.route('/brand-slug/:slug').get(getBrandBySlug);
-_.route('/update-brand/:slug').put(upload.single('image'), updateBrand);
+_.route('/update-brand/:slug').put(upload.fields([{ name: 'image', maxCount: 1 }]), updateBrand);
 _.route('/delete-brand/:slug').delete(deleteBrand);
 
 

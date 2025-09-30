@@ -132,6 +132,16 @@ export default async (req) => {
     return validations;
   } catch (error) {
     console.error("Validation error:", error);
-    throw new customError(400, error.details);
+    if (error instanceof customError) {
+      throw error;
+    }
+    
+    // Handle Joi validation errors
+    if (error.details && Array.isArray(error.details)) {
+      const errorMessages = error.details.map(detail => detail.message).join(', ');
+      throw new customError(400, errorMessages);
+    }
+    
+    throw new customError(400, error.message || 'Validation failed');
   }
 };

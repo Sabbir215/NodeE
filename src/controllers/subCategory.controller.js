@@ -12,13 +12,10 @@ export const createSubCategory = asyncHandler(async (req, res, next) => {
 
   // Validate sub-category data
   const validatedData = await subCategoryValidationSchema(req);
-  if (validatedData.error) {
-    return next(new CustomError(400, validatedData.error.details));
-  }
 
   // If an image file is provided, upload it to Cloudinary
-  if (req.file) {
-    validatedData.image = await uploadImage(req.file.path);
+  if (req.files.image && req.files.image[0]) {
+    validatedData.image = await uploadImage(req.files.image[0].path);
   }
 
   const { name, image, description, category } = validatedData;
@@ -104,10 +101,9 @@ export const updateSubCategory = asyncHandler(async (req, res, next) => {
   if (!req.body.name) req.body.name = sub.name;
 
   const validatedData = await subCategoryValidationSchema(req);
-  if (validatedData.error) return next(new CustomError(400, validatedData.error.details));
 
-  if (req.file) {
-    validatedData.image = await uploadImage(req.file.path);
+  if (req.files.image && req.files.image[0]) {
+    validatedData.image = await uploadImage(req.files.image[0].path);
   }
 
   const { name, image, description, category } = validatedData;

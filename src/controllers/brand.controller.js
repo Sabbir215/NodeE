@@ -12,11 +12,9 @@ export const createBrand = asyncHandler(async (req, res, next) => {
 
   // Validate brand data
   const validatedData = await brandValidationSchema(req);
-  if (validatedData.error) {
-    return next(new CustomError(400, validatedData.error.details));
-  }
-  if (req.file) {
-      validatedData.image = await uploadImage(req.file.path);
+  
+  if (req.files.image && req.files.image[0]) {
+      validatedData.image = await uploadImage(req.files.image[0].path);
   }
   const { name, image, description, subCategory, since } = validatedData;
 
@@ -103,13 +101,10 @@ export const updateBrand = asyncHandler(async (req, res, next) => {
 
   // Validate brand data
   const validatedData = await brandValidationSchema(req);
-  if (validatedData.error) {
-    return next(new CustomError(400, validatedData.error.details));
-  }
 
   // If an image file is provided, upload it to Cloudinary
-  if (req.file) {
-      validatedData.image = await uploadImage(req.file.path);
+  if (req.files.image && req.files.image[0]) {
+      validatedData.image = await uploadImage(req.files.image[0].path);
   }
   
   const { name, image, description, subCategory, since } = validatedData;

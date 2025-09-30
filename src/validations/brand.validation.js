@@ -74,13 +74,13 @@ export default async (req) => {
     );
 
     // image validation
-    if (req.file) {
+    if (req.files && req.files.image && req.files.image[0]) {
       const mimeTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-      const { mimetype } = req.file;
+      const { mimetype } = req.files.image[0];
       if (!mimeTypes.includes(mimetype)) {
         throw new customError(400, "Invalid image format. Only JPEG, PNG, JPG, and WEBP are allowed.");
       }
-      if (req.file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (req.files.image[0].size > 2 * 1024 * 1024) { // 2MB limit
         throw new customError(400, "Image size should not exceed 2MB.");
       }
     }
@@ -88,6 +88,16 @@ export default async (req) => {
     return validations;
   } catch (error) {
     console.error("Validation error:", error);
-    throw new customError(400, error.details);
+    if (error instanceof customError) {
+      throw error;
+    }
+    
+    // Handle Joi validation errors
+    if (error.details && Array.isArray(error.details)) {
+      const errorMessages = error.details.map(detail => detail.message).join(', ');
+      throw new customError(400, errorMessages);
+    }
+    
+    throw new customError(400, error.message || 'Validation failed');
   }
 };
