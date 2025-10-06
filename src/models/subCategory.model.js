@@ -80,5 +80,5 @@ subCategorySchema.pre('save', async function (next) {
   next();
 });
 
-export default mongoose.model("SubCategory", subCategorySchema);
+export default mongoose.models.SubCategory || mongoose.model("SubCategory", subCategorySchema);
 export { subCategorySchema };

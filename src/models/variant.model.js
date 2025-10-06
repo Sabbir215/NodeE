@@ -93,4 +93,4 @@ variantSchema.pre('save', async function (next) {
   next();
 });
 
-export default mongoose.model("Variant", variantSchema);
+export default mongoose.models.Variant || mongoose.model("Variant", variantSchema);

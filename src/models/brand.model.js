@@ -83,4 +83,4 @@ brandSchema.pre('save', async function (next) {
   next();
 });
 
-export default mongoose.model("Brand", brandSchema);
+export default mongoose.models.Brand || mongoose.model("Brand", brandSchema);

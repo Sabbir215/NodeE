@@ -101,4 +101,4 @@ discountSchema.pre('save', async function (next) {
   next();
 });
 
-export default mongoose.model("Discount", discountSchema);
+export default mongoose.models.Discount || mongoose.model("Discount", discountSchema);
