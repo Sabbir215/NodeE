@@ -1,5 +1,6 @@
 import Cart from "../models/cart.model.js";
-import Product from "../models/Product.model.js";
+import Coupon from "../models/coupon.model.js";
+import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
 import apiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -319,4 +320,118 @@ export const totalCartPrice = asyncHandler(async (req, res) => {
 
   return apiResponse.sendSuccess(res, 200, "Total cart price fetched", { totalPrice });
 });
+
+// Apply coupon to cart
+export const applyCoupon = asyncHandler(async (req, res) => {
+  const { user, code } = req.body;
+
+  if (!code) {
+    throw new CustomError(400, "Coupon code is required");
+  }
+
+  // Find user's cart
+  const cart = await Cart.findOne({ user }).populate("products.product");
+  if (!cart || cart.products.length === 0) {
+    throw new CustomError(404, "Cart is empty");
+  }
+
+  // Calculate cart total
+  const cartTotal = cart.products.reduce((total, item) => {
+    const productPrice = item.product ? item.product.retailPrice : 0;
+    return total + (productPrice * item.quantity);
+  }, 0);
+
+  // Find and validate coupon
+  const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+  if (!coupon) {
+    throw new CustomError(404, "Invalid coupon code");
+  }
+
+  // Check if coupon is active
+  if (!coupon.isActive) {
+    throw new CustomError(400, "This coupon is not active");
+  }
+
+  // Check if coupon is expired
+  if (coupon.isExpired()) {
+    throw new CustomError(400, "This coupon has expired");
+  }
+
+  // Check usage limit
+  if (coupon.isUsageLimitReached()) {
+    throw new CustomError(400, "This coupon has reached its usage limit");
+  }
+
+  // Check minimum purchase amount
+  if (cartTotal < coupon.minPurchaseAmount) {
+    throw new CustomError(
+      400,
+      `Minimum purchase amount of ৳${coupon.minPurchaseAmount} is required to use this coupon`
+    );
+  }
+
+  // Check if coupon is applicable to specific products
+  if (coupon.applicableTo === 'products' && coupon.applicableProducts.length > 0) {
+    const cartProductIds = cart.products.map(item => item.product._id.toString());
+    const applicableProductIds = coupon.applicableProducts.map(p => p.toString());
+    const hasApplicableProduct = cartProductIds.some(id => applicableProductIds.includes(id));
+
+    if (!hasApplicableProduct) {
+      throw new CustomError(400, "This coupon is not applicable to items in your cart");
+    }
+  }
+
+  // Calculate discount
+  const discountAmount = Math.round(coupon.calculateDiscount(cartTotal));
+  const finalAmount = Math.max(0, cartTotal - discountAmount);
+
+  // Update cart with coupon details
+  cart.coupon = coupon._id;
+  cart.discountAmount = discountAmount;
+  cart.discountType = coupon.discountType;
+  await cart.save();
+
+  // Increment coupon usage count
+  coupon.usedCount += 1;
+  await coupon.save();
+
+  return apiResponse.sendSuccess(res, 200, "Coupon applied successfully", {
+    cart,
+    cartTotal,
+    discountAmount,
+    finalAmount,
+    savings: discountAmount,
+  });
+});
+
+// Remove coupon from cart
+export const removeCoupon = asyncHandler(async (req, res) => {
+  const { user } = req.body;
+
+  // Find user's cart
+  const cart = await Cart.findOne({ user });
+  if (!cart) {
+    throw new CustomError(404, "Cart not found");
+  }
+
+  if (!cart.coupon) {
+    throw new CustomError(400, "No coupon applied to this cart");
+  }
+
+  // Decrement coupon usage count
+  const coupon = await Coupon.findById(cart.coupon);
+  if (coupon && coupon.usedCount > 0) {
+    coupon.usedCount -= 1;
+    await coupon.save();
+  }
+
+  // Remove coupon from cart
+  cart.coupon = null;
+  cart.discountAmount = 0;
+  cart.discountType = null;
+  await cart.save();
+
+  return apiResponse.sendSuccess(res, 200, "Coupon removed successfully", cart);
+});
+
 

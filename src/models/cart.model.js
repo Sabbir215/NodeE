@@ -28,6 +28,21 @@ const cartSchema = new Schema({
      },
     },
   ],
+  coupon: {
+    type: ObjectId,
+    ref: "Coupon",
+    default: null,
+  },
+  discountAmount: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  discountType: {
+    type: String,
+    enum: ["percentage", "fixed"],
+    default: null,
+  },
  }, { timestamps: true, versionKey: false });
 
 // Middleware to automatically delete cart if products array becomes empty

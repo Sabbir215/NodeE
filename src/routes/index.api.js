@@ -2,8 +2,10 @@ import express from 'express';
 import brand from './api/brand.api.js';
 import cart from './api/cart.api.js';
 import category from './api/category.api.js';
+import coupon from './api/coupon.api.js';
 import discount from './api/discount.api.js';
 import product from './api/product.api.js';
+import review from './api/review.api.js';
 import subCategory from './api/subCategory.api.js';
 import user from './api/user.api.js';
 import variant from './api/variant.api.js';
@@ -19,5 +21,7 @@ _.use("/product", product);
 _.use("/variant", variant);
 _.use("/cart", cart);
 _.use("/wishlist", wishlist);
+_.use("/coupon", coupon);
+_.use("/review", review);
 
 export default _;

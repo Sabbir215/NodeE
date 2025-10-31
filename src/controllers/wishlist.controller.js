@@ -1,5 +1,5 @@
 import Cart from "../models/cart.model.js";
-import Product from "../models/Product.model.js";
+import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
 import Wishlist from "../models/wishlist.model.js";
 import apiResponse from "../utils/apiResponse.js";

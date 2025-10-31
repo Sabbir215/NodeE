@@ -1,11 +1,12 @@
 import express from 'express';
-import { createProduct, deleteImageFromProduct, deleteProduct, getProductBySlug, getProducts, updateProduct } from '../../controllers/product.controller.js';
+import { createProduct, deleteImageFromProduct, deleteProduct, getPaginatedProducts, getProductBySlug, getProducts, updateProduct } from '../../controllers/product.controller.js';
 import { getVariantsByProductSlug } from '../../controllers/variant.controller.js';
 import upload from '../../middlewares/multer.middleware.js';
 const _ = express.Router();
 
 _.route('/create-product').post(upload.fields([{ name: 'images', maxCount: 10 }]), createProduct);
 _.route('/products').get(getProducts);
+_.route('/pagination').get(getPaginatedProducts);
 _.route('/product-slug/:slug').get(getProductBySlug);
 _.route('/product/:productSlug/variants').get(getVariantsByProductSlug);
 _.route('/update-product/:slug').put(upload.fields([{ name: 'images', maxCount: 10 }]), updateProduct);

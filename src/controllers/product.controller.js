@@ -329,6 +329,61 @@ export const getProducts = asyncHandler(async (req, res, next) => {
   apiResponse.sendSuccess(res, 200, "Products retrieved successfully", products);
 });
 
+// Get paginated products with flexible parameters
+export const getPaginatedProducts = asyncHandler(async (req, res, next) => {
+  // Get page and perPage from request body or query params, with defaults
+  const page = parseInt(req.body.page || req.query.page) || 1;
+  const perPage = parseInt(req.body.perPage || req.query.perPage) || 12;
+  
+  // Validate page and perPage
+  if (page < 1) {
+    throw new CustomError(400, "Page number must be greater than 0");
+  }
+  if (perPage < 1 || perPage > 100) {
+    throw new CustomError(400, "Items per page must be between 1 and 100");
+  }
+
+  const skip = (page - 1) * perPage;
+
+  // Get total count of products
+  const totalProducts = await Product.countDocuments();
+  
+  if (totalProducts === 0) {
+    return apiResponse.sendSuccess(res, 200, "No products found", {
+      products: [],
+      pagination: {
+        currentPage: page,
+        perPage: perPage,
+        totalPages: 0,
+        totalProducts: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+      }
+    });
+  }
+
+  // Get paginated products sequentially
+  const products = await Product.find()
+    .sort({ createdAt: -1 }) // Sort by newest first
+    .skip(skip)
+    .limit(perPage)
+    .populate('category subCategory brand variants discounts');
+
+  const totalPages = Math.ceil(totalProducts / perPage);
+
+  apiResponse.sendSuccess(res, 200, "Products retrieved successfully", {
+    products,
+    pagination: {
+      currentPage: page,
+      perPage: perPage,
+      totalPages: totalPages,
+      totalProducts: totalProducts,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1
+    }
+  });
+});
+
 export const getProductBySlug = asyncHandler(async (req, res, next) => {
   const { slug } = req.params;
   const product = await Product.findOne({ slug })

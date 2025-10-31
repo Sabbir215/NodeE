@@ -95,6 +95,17 @@ const productSchema = new Schema({
     default: 0,
     min: [0, "Alert quantity cannot be negative"],
   },
+  averageRating: {
+    type: Number,
+    default: 0,
+    min: [0, "Average rating cannot be negative"],
+    max: [5, "Average rating cannot exceed 5"],
+  },
+  totalReviews: {
+    type: Number,
+    default: 0,
+    min: [0, "Total reviews cannot be negative"],
+  },
   isActive: {
     type: Boolean,
     default: true,

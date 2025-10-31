@@ -31,12 +31,12 @@ const variantSchema = new Schema({
   size: {
     type: String,
     trim: true,
-    default: "N/A",
+    // default: "N/A",
   },
   color: {
     type: String,
     trim: true,
-    default: "N/A",
+    // default: "N/A",
   },
   stock: {
     type: Number,

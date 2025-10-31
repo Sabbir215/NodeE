@@ -1,5 +1,5 @@
 import express from 'express';
-import { addCartItemQuantity, addToCart, countCartItems, getCartItems, removeSelectedCartItems, setCartItemQuantity, subtractCartItemQuantity, totalCartPrice } from '../../controllers/cart.controller.js';
+import { addCartItemQuantity, addToCart, applyCoupon, countCartItems, getCartItems, removeCoupon, removeSelectedCartItems, setCartItemQuantity, subtractCartItemQuantity, totalCartPrice } from '../../controllers/cart.controller.js';
 const _ = express.Router();
 
 
@@ -11,5 +11,7 @@ _.route('/total-cart-price').get(totalCartPrice);
 _.route('/add-cart-item-quantity').patch(addCartItemQuantity);
 _.route('/subtract-cart-item-quantity').patch(subtractCartItemQuantity);
 _.route('/set-cart-item-quantity').patch(setCartItemQuantity);
+_.route('/apply-coupon').post(applyCoupon);
+_.route('/remove-coupon').post(removeCoupon);
 
 export default _;
